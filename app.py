@@ -12,18 +12,41 @@ def connect_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Get all employees
 @app.route('/employees', methods=['GET'])
 def get_employees():
+    name = request.args.get('name', '').lower()
+    mobile = request.args.get('mobile', '').lower()
+    email = request.args.get('email', '').lower()
+    department = request.args.get('department', '').lower()
+
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute('''
+
+    query = '''
         SELECT e.id, e.emp_name, e.mobile, e.email, e.address, e.dob, e.doj, e.gender, d.dept_name 
         FROM employees e
         JOIN departments d ON e.dept_id = d.id
-    ''')
+        WHERE 1=1
+    '''
+    params = []
+
+    if name:
+        query += ' AND LOWER(e.emp_name) LIKE ?'
+        params.append(f'%{name}%')
+    if mobile:
+        query += ' AND LOWER(e.mobile) LIKE ?'
+        params.append(f'%{mobile}%')
+    if email:
+        query += ' AND LOWER(e.email) LIKE ?'
+        params.append(f'%{email}%')
+    if department:
+        query += ' AND LOWER(d.dept_name) LIKE ?'
+        params.append(f'%{department}%')
+
+    cursor.execute(query, params)
     employees = [dict(row) for row in cursor.fetchall()]
     conn.close()
+
     return jsonify(employees)
 
 # Get all departments
