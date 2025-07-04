@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Department</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: white;
+        }
+        .container {
+            background: linear-gradient(to bottom right, #cce7f7, #71aadb);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <h2>Add Department</h2><hr>
+    <form id="departmentForm">
+        <div class="mb-3">
+            <input type="text" name="dept_name" class="form-control" placeholder="Department Name" required>
+        </div>
+        <div class="mb-3">
+            <input type="text" name="type" class="form-control" placeholder="Type" required>
+        </div>
+        <div class="mb-3">
+            <input type="text" name="address" class="form-control" placeholder="Address" required>
+        </div>
+        <button type="submit" class="centered-button">Add/Update</button>
+        <hr>
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $('#departmentForm').submit(function(e) {
+        e.preventDefault();
+        const dept = {
+            dept_name: $('input[name="dept_name"]').val(),
+            type: $('input[name="type"]').val(),
+            address: $('input[name="address"]').val()
+        };
+        $.ajax({
+            url: 'http://127.0.0.1:5000/departments',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dept),
+            success: function(res) {
+                alert('Department added successfully!');
+                window.location.href = 'index.html';
+            },
+            error: function(res) {
+                alert(res.responseJSON.error || 'Failed to add department');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

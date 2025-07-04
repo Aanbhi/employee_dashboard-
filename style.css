@@ -1,0 +1,10 @@
+body {
+    background-color: white;
+}
+
+.container {
+    background: linear-gradient(to bottom right, #cce7f7, #71aadb);
+    padding: 20px;
+    border-radius: 12px;
+    color: black;
+}
