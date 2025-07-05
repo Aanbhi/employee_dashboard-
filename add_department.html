@@ -19,45 +19,62 @@
 </head>
 <body>
 <div class="container mt-4">
-    <h2>Add Department</h2><hr>
-    <form id="departmentForm">
+    <h2 class="text-center">Add Department</h2>
+    <hr>
+    <form id="departmentForm" novalidate>
         <div class="mb-3">
-            <input type="text" name="dept_name" class="form-control" placeholder="Department Name" required>
+            <label for="deptName" class="form-label">Department Name <span class="text-danger">*</span></label>
+            <input type="text" id="deptName" name="dept_name" class="form-control" placeholder="Enter department name" required>
+            <div class="invalid-feedback">Department name is required.</div>
         </div>
         <div class="mb-3">
-            <input type="text" name="type" class="form-control" placeholder="Type" required>
+            <label for="deptType" class="form-label">Type <span class="text-danger">*</span></label>
+            <input type="text" id="deptType" name="type" class="form-control" placeholder="Enter type" required>
+            <div class="invalid-feedback">Type is required.</div>
         </div>
         <div class="mb-3">
-            <input type="text" name="address" class="form-control" placeholder="Address" required>
+            <label for="deptAddress" class="form-label">Address <span class="text-danger">*</span></label>
+            <input type="text" id="deptAddress" name="address" class="form-control" placeholder="Enter address" required>
+            <div class="invalid-feedback">Address is required.</div>
         </div>
-        <button type="submit" class="centered-button">Add/Update</button>
+        <button type="submit" class="btn btn-success">Add / Update</button>
         <hr>
     </form>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $('#departmentForm').submit(function(e) {
-        e.preventDefault();
-        const dept = {
-            dept_name: $('input[name="dept_name"]').val(),
-            type: $('input[name="type"]').val(),
-            address: $('input[name="address"]').val()
-        };
-        $.ajax({
-            url: 'http://127.0.0.1:5000/departments',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(dept),
-            success: function(res) {
-                alert('Department added successfully!');
-                window.location.href = 'index.html';
-            },
-            error: function(res) {
-                alert(res.responseJSON.error || 'Failed to add department');
+    (function () {
+        'use strict';
+        const form = document.getElementById('departmentForm');
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            } else {
+                event.preventDefault();
+                const dept = {
+                    dept_name: $('#deptName').val().trim(),
+                    type: $('#deptType').val().trim(),
+                    address: $('#deptAddress').val().trim()
+                };
+                $.ajax({
+                    url: 'http://127.0.0.1:5000/departments',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(dept),
+                    success: function (res) {
+                        alert('Department added successfully!');
+                        window.location.href = 'index.html';
+                    },
+                    error: function (res) {
+                        alert(res.responseJSON?.error || 'Failed to add department');
+                    }
+                });
             }
-        });
-    });
+            form.classList.add('was-validated');
+        }, false);
+    })();
 </script>
 
 </body>
