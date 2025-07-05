@@ -1,172 +1,161 @@
-$(document).ready(function () {
-    console.log("script.js loaded");
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import sqlite3
 
-    // Load employees (optionally with search params)
-    function loadEmployees(params = {}) {
-        $.get('http://127.0.0.1:5000/employees', params, function (data) {
-            let rows = '';
-            data.forEach(emp => {
-                rows += `<tr data-id="${emp.id}">
-                    <td>${emp.emp_name}</td>
-                    <td>${emp.mobile}</td>
-                    <td>${emp.email}</td>
-                    <td>${emp.dept_name}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info view-btn" data-emp='${JSON.stringify(emp)}'>View</button>
-                        <button class="btn btn-sm btn-warning edit-btn" data-emp='${JSON.stringify(emp)}'>Edit</button>
-                        <button class="btn btn-sm btn-danger delete-btn">Delete</button>
-                    </td>
-                </tr>`;
-            });
-            $('#employeeTable tbody').html(rows);
-        }).fail(function () {
-            alert("Failed to fetch employees");
-        });
-    }
+app = Flask(__name__)
+CORS(app)
 
-    // Initial load
-    loadEmployees();
+DATABASE = 'database.db'
 
-    // Search form submit
-    $('#searchForm').submit(function (e) {
-        e.preventDefault();
+def connect_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-        const name = $('input[name="Employee name"]').val().trim();
-        const mobile = $('input[name="Mobile"]').val().trim();
-        const email = $('input[name="Email"]').val().trim();
-        const department = $('input[name="Department"]').val().trim();
+@app.route('/employees', methods=['GET'])
+def get_employees():
+    name = request.args.get('name', '').lower()
+    mobile = request.args.get('mobile', '').lower()
+    email = request.args.get('email', '').lower()
+    department = request.args.get('department', '').lower()
 
-        const params = {};
-        if (name) params.name = name;
-        if (mobile) params.mobile = mobile;
-        if (email) params.email = email;
-        if (department) params.department = department;
+    conn = connect_db()
+    cursor = conn.cursor()
 
-        loadEmployees(params);  
-    });
+    query = '''
+        SELECT e.id, e.emp_name, e.mobile, e.email, e.address, e.dob, e.doj, e.gender, d.dept_name 
+        FROM employees e
+        JOIN departments d ON e.dept_id = d.id
+        WHERE 1=1
+    '''
+    params = []
 
-    // Otherwise, search with provided values
-    $.get('http://127.0.0.1:5000/employees/search', {
-        name: name,
-        mobile: mobile,
-        email: email,
-        department: department
-    }, function (data) {
-        let rows = '';
-        data.forEach(emp => {
-            rows += `<tr data-id="${emp.id}">
-                <td>${emp.emp_name}</td>
-                <td>${emp.mobile}</td>
-                <td>${emp.email}</td>
-                <td>${emp.dept_name}</td>
-                <td>
-                    <button class="btn btn-sm btn-info view-btn" data-emp='${JSON.stringify(emp)}'>View</button>
-                    <button class="btn btn-sm btn-warning edit-btn" data-emp='${JSON.stringify(emp)}'>Edit</button>
-                    <button class="btn btn-sm btn-danger delete-btn">Delete</button>
-                </td>
-            </tr>`;
-        });
-        $('#employeeTable tbody').html(rows);
-    }).fail(function () {
-        alert("Failed to search employees");
-    });
+    if name:
+        query += ' AND LOWER(e.emp_name) LIKE ?'
+        params.append(f'%{name}%')
+    if mobile:
+        query += ' AND LOWER(e.mobile) LIKE ?'
+        params.append(f'%{mobile}%')
+    if email:
+        query += ' AND LOWER(e.email) LIKE ?'
+        params.append(f'%{email}%')
+    if department:
+        query += ' AND LOWER(d.dept_name) LIKE ?'
+        params.append(f'%{department}%')
 
-    // View Employee
-    $('#employeeTable').on('click', '.view-btn', function () {
-        const emp = $(this).data('emp');
-        const details = `
-            <p><strong>Name:</strong> ${emp.emp_name}</p>
-            <p><strong>Email:</strong> ${emp.email}</p>
-            <p><strong>Mobile:</strong> ${emp.mobile}</p>
-            <p><strong>Department:</strong> ${emp.dept_name}</p>
-            <p><strong>Address:</strong> ${emp.address}</p>
-            <p><strong>DOB:</strong> ${emp.dob}</p>
-            <p><strong>DOJ:</strong> ${emp.doj}</p>
-            <p><strong>Gender:</strong> ${emp.gender}</p>`;
-        $('#viewModalBody').html(details);
+    cursor.execute(query, params)
+    employees = [dict(row) for row in cursor.fetchall()]
+    conn.close()
 
-        const viewModalEl = document.getElementById('viewModal');
-        const viewModal = bootstrap.Modal.getOrCreateInstance(viewModalEl);
-        viewModal.show();
-    });
+    return jsonify(employees)
 
-    // Delete Employee
-    let selectedEmpId;
-    $('#employeeTable').on('click', '.delete-btn', function () {
-        selectedEmpId = $(this).closest('tr').data('id');
-        const deleteModalEl = document.getElementById('deleteConfirmModal');
-        const deleteModal = bootstrap.Modal.getOrCreateInstance(deleteModalEl);
-        deleteModal.show();
-    });
+# Get all departments
+@app.route('/departments', methods=['GET'])
+def get_departments():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM departments')
+    departments = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(departments)
 
-    $('#confirmDeleteBtn').click(function () {
-        if (selectedEmpId) {
-            $.ajax({
-                url: `http://127.0.0.1:5000/employees/${selectedEmpId}`,
-                type: 'DELETE',
-                success: function () {
-                    const deleteModalEl = document.getElementById('deleteConfirmModal');
-                    const deleteModal = bootstrap.Modal.getInstance(deleteModalEl);
-                    deleteModal.hide();
-                    alert('Employee deleted successfully');
-                    loadEmployees();
-                },
-                error: function () {
-                    alert('Failed to delete employee');
-                }
-            });
-        }
-    });
+# Add a new employee
+@app.route('/employees', methods=['POST'])
+def add_employee():
+    data = request.json
+    conn = connect_db()
+    cursor = conn.cursor()
 
-    // Edit Employee
-    $('#employeeTable').on('click', '.edit-btn', function () {
-        const emp = $(this).data('emp');
-        $('#editEmpId').val(emp.id);
-        $('#editName').val(emp.emp_name);
-        $('#editEmail').val(emp.email);
-        $('#editMobile').val(emp.mobile);
-        $('#editDept').val(emp.dept_name);
-        $('#editAddress').val(emp.address || '');
-        $('#editDob').val(emp.dob || '');
-        $('#editDoj').val(emp.doj || '');
-        $('#editGender').val(emp.gender || '');
+    cursor.execute("SELECT id FROM departments WHERE LOWER(dept_name) = LOWER(?)", (data['department'],))
+    dept = cursor.fetchone()
+    if not dept:
+        return jsonify({'error': 'Department not found'}), 400
 
-        const editModalEl = document.getElementById('editModal');
-        const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
-        editModal.show();
-    });
+    cursor.execute('''
+        INSERT INTO employees (emp_name, address, mobile, email, dob, doj, gender, active, dept_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('emp_name'),
+        data.get('address', 'N/A'),
+        data.get('mobile'),
+        data.get('email'),
+        data.get('dob', '2000-01-01'),
+        data.get('doj', '2020-01-01'),
+        data.get('gender', 'M'),
+        1,
+        dept['id']
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Employee added successfully'}), 201
 
-    // Update Employee
-    $('#editForm').submit(function (e) {
-        e.preventDefault();
-        const empId = $('#editEmpId').val();
-        const emp = {
-            emp_name: $('#editName').val(),
-            email: $('#editEmail').val(),
-            mobile: $('#editMobile').val(),
-            department: $('#editDept').val(),
-            address: $('#editAddress').val(),
-            dob: $('#editDob').val(),
-            doj: $('#editDoj').val(),
-            gender: $('#editGender').val()
-        };
-        $.ajax({
-            url: `http://127.0.0.1:5000/employees/${empId}`,
-            type: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify(emp),
-            success: function () {
-                const editModalEl = document.getElementById('editModal');
-                const editModal = bootstrap.Modal.getInstance(editModalEl);
-                editModal.hide();
-                alert('Employee updated successfully');
-                loadEmployees();
-            },
-            error: function (res) {
-                console.error(res);
-                alert(res.responseJSON?.error || 'Failed to update employee');
-            }
-        });
-    });
-});
+# Edit an employee
+@app.route('/employees/<int:emp_id>', methods=['PUT'])
+def update_employee(emp_id):
+    data = request.json
+    conn = connect_db()
+    cursor = conn.cursor()
 
+    cursor.execute("SELECT id FROM departments WHERE LOWER(dept_name) = LOWER(?)", (data['department'],))
+    dept = cursor.fetchone()
+    if not dept:
+        return jsonify({'error': 'Department not found'}), 400
+
+    cursor.execute('''
+        UPDATE employees
+        SET emp_name = ?, address = ?, mobile = ?, email = ?, dob = ?, doj = ?, gender = ?, dept_id = ?
+        WHERE id = ?
+    ''', (
+        data.get('emp_name'),
+        data.get('address'),
+        data.get('mobile'),
+        data.get('email'),
+        data.get('dob'),
+        data.get('doj'),
+        data.get('gender'),
+        dept['id'],
+        emp_id
+    ))
+
+    if cursor.rowcount == 0:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Employee updated successfully'})
+
+# Delete an employee
+@app.route('/employees/<int:emp_id>', methods=['DELETE'])
+def delete_employee(emp_id):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM employees WHERE id = ?', (emp_id,))
+
+    if cursor.rowcount == 0:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Employee deleted successfully'})
+
+# Add a new department
+@app.route('/departments', methods=['POST'])
+def add_department():
+    data = request.json
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO departments (dept_name, type, active, address)
+        VALUES (?, ?, ?, ?)
+    ''', (
+        data.get('dept_name'),
+        data.get('type'),
+        1,
+        data.get('address')
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Department added successfully'}), 201
+
+if __name__ == '__main__':
+    app.run(debug=True)
