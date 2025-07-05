@@ -20,21 +20,24 @@
 
 <div class="container mt-4">
     <h2 class="text-center">Add Employee</h2><hr>
-    <form id="employeeForm">
+    <form id="employeeForm" novalidate>
         <div class="mb-3">
-            <label>Employee Name</label>
+            <label>Employee Name <span class="text-danger">*</span></label>
             <input type="text" name="emp_name" class="form-control" placeholder="Name" required>
+            <div class="invalid-feedback">Employee name is required.</div>
         </div>
         <div class="mb-3">
-            <label>Email</label>
+            <label>Email <span class="text-danger">*</span></label>
             <input type="email" name="email" class="form-control" placeholder="Email" required>
+            <div class="invalid-feedback">Valid email is required.</div>
         </div>
         <div class="mb-3">
-            <label>Mobile No</label>
-            <input type="tel" name="mobile" class="form-control" placeholder="Mobile" required>
+            <label>Mobile No <span class="text-danger">*</span></label>
+            <input type="tel" name="mobile" class="form-control" placeholder="Mobile" pattern="[0-9]{10}" required>
+            <div class="invalid-feedback">Enter a 10-digit mobile number.</div>
         </div>
         <div class="mb-3">
-            <label>Department</label>
+            <label>Department <span class="text-danger">*</span></label>
             <select name="department" class="form-control" required>
                 <option value="">Select Department</option>
                 <option value="Sales">Sales</option>
@@ -43,27 +46,32 @@
                 <option value="Marketing">Marketing</option>
                 <option value="Finance">Finance</option>
             </select>
+            <div class="invalid-feedback">Department is required.</div>
         </div>
         <div class="mb-3">
-            <label>Address</label>
+            <label>Address <span class="text-danger">*</span></label>
             <input type="text" name="address" class="form-control" placeholder="Address" required>
+            <div class="invalid-feedback">Address is required.</div>
         </div>
         <div class="mb-3">
-            <label>DOB</label>
+            <label>DOB <span class="text-danger">*</span></label>
             <input type="date" name="DOB" class="form-control" required>
+            <div class="invalid-feedback">Date of birth is required.</div>
         </div>
         <div class="mb-3">
-            <label>DOJ</label>
+            <label>DOJ <span class="text-danger">*</span></label>
             <input type="date" name="DOJ" class="form-control" required>
+            <div class="invalid-feedback">Date of joining is required.</div>
         </div>
         <div class="mb-3">
-            <label>Gender</label><br>
+            <label>Gender <span class="text-danger">*</span></label><br>
             <input type="radio" id="male" name="gender" value="male" required>
             <label for="male">Male</label>
             <input type="radio" id="female" name="gender" value="female">
             <label for="female">Female</label>
             <input type="radio" id="other" name="gender" value="other">
             <label for="other">Other</label>
+            <div class="invalid-feedback d-block mt-1">Please select gender.</div>
         </div>
         <button type="submit" class="btn btn-primary">Add Employee</button>
         <hr>
@@ -72,33 +80,42 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $('#employeeForm').submit(function(e) {
-        e.preventDefault();
-        const emp = {
-            emp_name: $('input[name="emp_name"]').val(),
-            email: $('input[name="email"]').val(),
-            mobile: $('input[name="mobile"]').val(),
-            department: $('select[name="department"]').val(),
-            address: $('input[name="address"]').val(),
-            dob: $('input[name="DOB"]').val(),
-            doj: $('input[name="DOJ"]').val(),
-            gender: $('input[name="gender"]:checked').val()
-        };
-        $.ajax({
-            url: 'http://127.0.0.1:5000/employees',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(emp),
-            success: function(res) {
-                alert('Employee added successfully!');
-                window.location.href = 'index.html';
-            },
-            error: function(res) {
-                console.error(res);
-                alert(res.responseJSON?.error || 'Failed to add employee');
+    (function () {
+        'use strict'
+        const form = document.getElementById('employeeForm');
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            } else {
+                event.preventDefault();
+                const emp = {
+                    emp_name: $('input[name="emp_name"]').val(),
+                    email: $('input[name="email"]').val(),
+                    mobile: $('input[name="mobile"]').val(),
+                    department: $('select[name="department"]').val(),
+                    address: $('input[name="address"]').val(),
+                    dob: $('input[name="DOB"]').val(),
+                    doj: $('input[name="DOJ"]').val(),
+                    gender: $('input[name="gender"]:checked').val()
+                };
+                $.ajax({
+                    url: 'http://127.0.0.1:5000/employees',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(emp),
+                    success: function(res) {
+                        alert('Employee added successfully!');
+                        window.location.href = 'index.html';
+                    },
+                    error: function(res) {
+                        alert(res.responseJSON?.error || 'Failed to add employee');
+                    }
+                });
             }
-        });
-    });
+            form.classList.add('was-validated')
+        }, false)
+    })();
 </script>
 
 </body>
