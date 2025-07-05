@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
@@ -18,36 +19,56 @@ def get_employees():
     mobile = request.args.get('mobile', '').lower()
     email = request.args.get('email', '').lower()
     department = request.args.get('department', '').lower()
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 5))
 
     conn = connect_db()
     cursor = conn.cursor()
 
-    query = '''
-        SELECT e.id, e.emp_name, e.mobile, e.email, e.address, e.dob, e.doj, e.gender, d.dept_name 
+    base_query = '''
         FROM employees e
         JOIN departments d ON e.dept_id = d.id
         WHERE 1=1
     '''
+    filters = ''
     params = []
 
     if name:
-        query += ' AND LOWER(e.emp_name) LIKE ?'
+        filters += ' AND LOWER(e.emp_name) LIKE ?'
         params.append(f'%{name}%')
     if mobile:
-        query += ' AND LOWER(e.mobile) LIKE ?'
+        filters += ' AND LOWER(e.mobile) LIKE ?'
         params.append(f'%{mobile}%')
     if email:
-        query += ' AND LOWER(e.email) LIKE ?'
+        filters += ' AND LOWER(e.email) LIKE ?'
         params.append(f'%{email}%')
     if department:
-        query += ' AND LOWER(d.dept_name) LIKE ?'
+        filters += ' AND LOWER(d.dept_name) LIKE ?'
         params.append(f'%{department}%')
 
-    cursor.execute(query, params)
+    # Get total count
+    count_query = 'SELECT COUNT(*) ' + base_query + filters
+    cursor.execute(count_query, params)
+    total_count = cursor.fetchone()[0]
+
+    # Fetch paginated results
+    data_query = f'''
+        SELECT e.id, e.emp_name, e.mobile, e.email, e.address, e.dob, e.doj, e.gender, d.dept_name
+        {base_query} {filters}
+        ORDER BY e.id DESC
+        LIMIT ? OFFSET ?
+    '''
+    params.extend([per_page, (page - 1) * per_page])
+    cursor.execute(data_query, params)
     employees = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
-    return jsonify(employees)
+    return jsonify({
+        'data': employees,
+        'total_pages': (total_count + per_page - 1) // per_page,
+        'current_page': page,
+        'total_count': total_count
+    })
 
 # Get all departments
 @app.route('/departments', methods=['GET'])
@@ -159,3 +180,4 @@ def add_department():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
