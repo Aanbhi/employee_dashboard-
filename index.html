@@ -38,6 +38,10 @@
     .modal-content {
       border-radius: 10px;
     }
+
+    nav ul.pagination {
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -54,13 +58,20 @@
         <a href="add_employee.html" class="btn btn-custom">Add Employee</a>
         <a href="add_department.html" class="btn btn-custom">Add Department</a>
       </div>
-    </div><hr>
+    </div>
   </form>
+  <hr>
 
+  <!-- Employee Table -->
   <table id="employeeTable" class="table table-striped mt-4 bg-white">
     <thead><tr><th>Name</th><th>Mobile</th><th>Email</th><th>Department</th><th>Action</th></tr></thead>
     <tbody></tbody>
   </table>
+
+  <!-- Pagination Controls -->
+  <nav>
+    <ul class="pagination justify-content-center" id="pagination"></ul>
+  </nav>
 </div>
 
 <!-- Delete Confirmation Modal -->
@@ -102,7 +113,7 @@
         <h5 class="modal-title" id="editModalLabel">Edit Employee</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="editForm">
+      <form id="editForm" novalidate>
         <div class="modal-body">
           <input type="hidden" id="editEmpId">
           <div class="mb-3"><input type="text" id="editName" class="form-control" placeholder="Name" required></div>
